@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     let rawBody: unknown;
     try {
       rawBody = await req.json();
+      console.log("request body", rawBody);
     } catch {
       return NextResponse.json<ChatErrorResponse>(
         {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Runtime Schema Validation via Zod
     const validationResult = chatRequestSchema.safeParse(rawBody);
-
+    console.log("validationResult", validationResult);
     if (!validationResult.success) {
       const firstErrorMessage =
         validationResult.error.issues[0]?.message || "Invalid request payload.";
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
     const { messages } = validationResult.data;
     const aiResponse = await generateGeminiChat(messages);
 
+    console.log("ai respnose", aiResponse);
     // 4. Return formatted response
     return NextResponse.json(aiResponse, { status: 200 });
   } catch (error: unknown) {
