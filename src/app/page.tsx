@@ -20,7 +20,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Phase 1: Basic Chat</span>
+            <span>Phase 2: Streaming</span>
           </div>
         </div>
       </nav>

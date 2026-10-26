@@ -71,3 +71,56 @@ export async function generateGeminiChat(
     );
   }
 }
+
+/**
+ * Executes a streaming chat completion request against Google Gemini.
+ * Returns a standard Web ReadableStream that emits UTF-8 text chunks as they arrive from the model.
+ */
+export async function streamGeminiChat(
+  messages: Array<Pick<ChatMessage, "role" | "content">>,
+  signal?: AbortSignal
+): Promise<ReadableStream<Uint8Array>> {
+  const ai = getGeminiClient();
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  const contents = messages.map((msg) => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.content }],
+  }));
+
+  const responseStream = await ai.models.generateContentStream({
+    model: modelName,
+    contents,
+    config: {
+      systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
+      temperature: 0.2,
+    },
+  });
+
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        for await (const chunk of responseStream) {
+          // If the client aborted the connection, break out early
+          if (signal?.aborted) {
+            controller.close();
+            return;
+          }
+
+          const text = chunk.text;
+          if (text) {
+            controller.enqueue(encoder.encode(text));
+          }
+        }
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+    cancel() {
+      // Called when consumer closes the stream early
+    },
+  });
+}

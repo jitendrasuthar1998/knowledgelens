@@ -35,3 +35,19 @@ This document tracks technical questions, model answers, and interview scenarios
 - **How it works:** Zod parses the incoming untrusted JSON object against our schema (`chatRequestSchema`) at runtime on the server before we pass anything to external APIs or database queries.
 - **Example from our app:** If an attacker sends a 10MB string or non-array messages to `/api/chat`, Zod rejects it immediately with HTTP 422, protecting our server memory and preventing unnecessary AI provider API billing.
 
+---
+
+### Q5: "How does response streaming work under the hood in Next.js App Router, and why do we use ReadableStream over Server-Sent Events (SSE) for simple LLM chats?"
+- **Direct Answer:** Streaming uses HTTP chunked transfer encoding (`Transfer-Encoding: chunked`), where the server emits data segments over an open connection as soon as upstream tokens arrive.
+- **How it works:** In `/api/chat/route.ts`, we return a Web standard `Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })`. The browser reads raw `Uint8Array` chunks using `response.body.getReader()` and converts them using `TextDecoder`.
+- **Why not SSE here?** SSE requires event framing (`data: ...\n\n`), custom reconnection logic, and event listeners. For standard unidirectional LLM text streams, Fetch `ReadableStream` is lighter, avoids text formatting overhead, and natively pairs with standard POST bodies and `AbortController`.
+- **Trade-off / Limitation:** If we need multiple event channels over a single connection (e.g., streaming text on one channel and citation metadata or progress events on another), SSE or NDJSON (Newline Delimited JSON) is preferred.
+
+---
+
+### Q6: "How do you implement a 'Stop Generation' button in a React streaming chat interface, and what happens on the server?"
+- **Direct Answer:** We instantiate a new `AbortController()` before making the `fetch()` call and pass its `controller.signal` to the fetch request options. Clicking 'Stop' calls `controller.abort()`.
+- **How it works on the frontend:** `controller.abort()` rejects the fetch promise with a `DOMException` with `name: "AbortError"`. In our catch block, we check `if (err.name === "AbortError")` and silently stop updating state rather than displaying an error banner.
+- **How it works on the server:** In Next.js, `req.signal` reflects the client's connection state. Passing `req.signal` to our model stream generator lets us break the `for await (const chunk of responseStream)` loop when `signal.aborted` is true, immediately terminating the upstream AI provider call and saving costs.
+
+

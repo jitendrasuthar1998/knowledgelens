@@ -33,3 +33,21 @@
 - **System Instruction:** Informs the model of its baseline identity and safety boundaries before reading user messages.
 - **Temperature:** Set to `0.2` for factual, grounded responses (minimizes hallucination variance). Higher temperatures (e.g. 0.8) are reserved for creative writing.
 - **Role Mapping:** Google Gemini uses `{ role: "user" | "model" }` rather than the OpenAI convention `{ role: "user" | "assistant" }`. We cleanly map this inside `src/lib/ai/gemini.ts`.
+
+---
+
+## Phase 2: Streaming Responses & UI Interactivity
+
+### 1. HTTP Chunked Transfer Encoding
+- Non-streaming responses wait for the full payload before sending headers with `Content-Length`.
+- Streaming responses omit `Content-Length` and send data as chunked byte frames (`Transfer-Encoding: chunked`).
+- The connection stays open until the server explicitly invokes `controller.close()`.
+
+### 2. Transport Chunks vs. Natural Words
+- Chunks arriving in `reader.read()` are raw byte buffers (`Uint8Array`), split by TCP packet boundaries—NOT clean words or whole tokens.
+- Using `new TextDecoder("utf-8")` with `{ stream: true }` ensures multibyte characters that cross chunk boundaries are buffered rather than corrupted.
+
+### 3. Client Cancellation (`AbortController`)
+- When a user stops generation, calling `controller.abort()` emits an `AbortSignal`.
+- Frontend fetch terminates with a `DOMException (name: "AbortError")`, allowing graceful cleanup without triggering error alerts.
+- On the server, `req.signal.aborted` detects disconnection and halts upstream model generation, preventing wasted API quota.

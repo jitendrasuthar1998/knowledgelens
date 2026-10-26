@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chatRequestSchema } from "@/lib/validation/chat";
-import { generateGeminiChat } from "@/lib/ai/gemini";
+import { streamGeminiChat } from "@/lib/ai/gemini";
 import { ChatErrorResponse } from "@/types/chat";
-
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +9,6 @@ export async function POST(req: NextRequest) {
     let rawBody: unknown;
     try {
       rawBody = await req.json();
-      console.log("request body", rawBody);
     } catch {
       return NextResponse.json<ChatErrorResponse>(
         {
@@ -24,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Runtime Schema Validation via Zod
     const validationResult = chatRequestSchema.safeParse(rawBody);
-    console.log("validationResult", validationResult);
+
     if (!validationResult.success) {
       const firstErrorMessage =
         validationResult.error.issues[0]?.message || "Invalid request payload.";
@@ -39,13 +37,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Forward to Server-Side AI Client
+    // 3. Forward to Server-Side AI Streaming Client
     const { messages } = validationResult.data;
-    const aiResponse = await generateGeminiChat(messages);
+    const stream = await streamGeminiChat(messages, req.signal);
 
-    console.log("ai respnose", aiResponse);
-    // 4. Return formatted response
-    return NextResponse.json(aiResponse, { status: 200 });
+    // 4. Return chunked streaming Response
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   } catch (error: unknown) {
     const err = error as Error;
     const message = err.message || "Internal server error occurred.";

@@ -5,9 +5,10 @@ import { Bot, User } from "lucide-react";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  isStreaming?: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
@@ -36,7 +37,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             : "bg-slate-900/90 text-slate-200 border border-slate-800 rounded-tl-sm shadow-lg shadow-black/20"
         }`}
       >
-        <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        <div className="whitespace-pre-wrap break-words">
+          {message.content}
+          {isStreaming && (
+            <span
+              className="inline-block w-1.5 h-4 ml-1 bg-cyan-400 animate-pulse align-middle rounded-sm"
+              aria-hidden="true"
+            />
+          )}
+        </div>
 
         {/* Timestamp */}
         <div

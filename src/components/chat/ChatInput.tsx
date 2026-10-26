@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Square } from "lucide-react";
 
 interface ChatInputProps {
   input: string;
   setInput: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onStop?: () => void;
   isLoading: boolean;
+  isStreaming?: boolean;
   maxLength?: number;
 }
 
@@ -15,7 +17,9 @@ export function ChatInput({
   input,
   setInput,
   onSubmit,
+  onStop,
   isLoading,
+  isStreaming = false,
   maxLength = 4000,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -65,28 +69,40 @@ export function ChatInput({
             </span>
           </div>
 
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            aria-label="Send message"
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-              canSubmit
-                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 cursor-pointer active:scale-95"
-                : "bg-slate-800 text-slate-500 cursor-not-allowed"
-            }`}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Thinking...</span>
-              </>
-            ) : (
-              <>
-                <span>Send</span>
-                <Send className="w-3.5 h-3.5" />
-              </>
-            )}
-          </button>
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={onStop}
+              aria-label="Stop generating response"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all cursor-pointer active:scale-95"
+            >
+              <Square className="w-3 h-3 fill-current text-rose-400" />
+              <span>Stop</span>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              aria-label="Send message"
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                canSubmit
+                  ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 cursor-pointer active:scale-95"
+                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Connecting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Send</span>
+                  <Send className="w-3.5 h-3.5" />
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </form>

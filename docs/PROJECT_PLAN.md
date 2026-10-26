@@ -11,7 +11,7 @@
 |---|---|---|
 | **Phase 0** | Bare Next.js 16 + React 19 + TypeScript + Tailwind v4 setup & verification | **DONE** |
 | **Phase 1** | Foundation & Basic LLM Chat (UI shell, Route Handler, Zod validation, error handling) | **DONE** |
-| **Phase 2** | Streaming Responses (`ReadableStream`, custom hooks, abort/stop generation) | Pending |
+| **Phase 2** | Streaming Responses (`ReadableStream`, custom hooks, abort/stop generation) | **DONE** |
 | **Phase 3** | Document Ingestion (PDF upload, validation, parsing, recursive chunking) | Pending |
 | **Phase 4** | Embeddings & Vector Search (pgvector integration, cosine similarity retrieval) | Pending |
 | **Phase 5** | Complete Grounded RAG Pipeline (augmented prompts, citations, source inspector) | Pending |
