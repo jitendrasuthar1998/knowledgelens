@@ -51,3 +51,34 @@
 - When a user stops generation, calling `controller.abort()` emits an `AbortSignal`.
 - Frontend fetch terminates with a `DOMException (name: "AbortError")`, allowing graceful cleanup without triggering error alerts.
 - On the server, `req.signal.aborted` detects disconnection and halts upstream model generation, preventing wasted API quota.
+
+---
+
+## Phase 3: Document Ingestion, PDF Processing & Recursive Chunking
+
+### 1. Magic Bytes Defense vs File Extension Spoofing
+- An attacker can rename a malicious script (`malware.exe` or `hack.sh`) to `invoice.pdf` to pass naive file extension checks (`.endsWith(".pdf")`).
+- Checking the file's first bytes for `%PDF-` (`0x25, 0x50, 0x44, 0x46, 0x2D`) at the binary level ensures the uploaded buffer matches the ISO 32000 PDF file signature before any parsing logic is invoked.
+
+### 2. Digital PDFs vs Scanned/Image PDFs
+- Standard PDF parsers extract digital text embedded as character glyph objects.
+- Scanned documents or smartphone photos saved as PDFs contain only raster bitmap images without a digital text layer.
+- Our extraction engine computes total characters across all pages; if $<20$ characters are extracted, it detects a scanned document and informs the user that OCR (Optical Character Recognition) is required.
+
+### 3. Why Recursive Character Chunking over Naive Fixed-Size Chunking?
+- **Naive Splitting (`text.slice(0, 600)`):** Blindly cuts through words, mid-sentence thoughts, and formulas (e.g. cutting `"Postgre"` from `"SQL"`), degrading vector embedding quality.
+- **Recursive Splitting:** Tries high-priority natural document boundaries first:
+  1. `\n\n` (Paragraphs)
+  2. `\n` (Lines & list items)
+  3. `. `, `? `, `! ` (Sentences)
+  4. `" "` (Words)
+  5. `""` (Characters, fallback only)
+- This guarantees semantic cohesion within every passage fed to the vector database.
+
+### 4. Sliding Overlap Rationale
+- Splitting a document into isolated chunks can sever context across the boundary (e.g., a premise in chunk 1 and its conclusion in chunk 2).
+- An overlap of 120 characters carries over trailing context into the next chunk, preserving narrative flow and improving cosine similarity matches during vector retrieval.
+
+### 5. Page Provenance for Grounded Citations
+- Many generic frameworks concatenate the entire document into a single flat string before chunking, destroying page indices.
+- By chunking page-by-page and attaching `pageNumber`, every chunk retains its original location, enabling clickable citations (*"Source: Page 3"*) in Phase 5.
