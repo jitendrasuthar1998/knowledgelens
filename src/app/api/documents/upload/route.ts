@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateFileBasics, validatePdfMagicBytes } from "@/lib/pdf/validation";
 import { extractPdfText } from "@/lib/pdf/extractor";
 import { chunkDocumentPages } from "@/lib/ai/chunking";
+import { generateBatchEmbeddings } from "@/lib/ai/embeddings";
+import { saveDocumentWithVectors } from "@/lib/db/documents";
 import {
   DocumentMetadata,
   DocumentUploadResponse,
@@ -95,6 +97,18 @@ export async function POST(req: NextRequest) {
       chunkCount: chunks.length,
       extractedCharacters: totalCharacters,
     };
+
+    // 10. Generate Vector Embeddings & Persist to pgvector
+    if (process.env.DATABASE_URL && chunks.length > 0) {
+      try {
+        const chunkTexts = chunks.map((c) => c.content);
+        const embeddings = await generateBatchEmbeddings(chunkTexts);
+        await saveDocumentWithVectors(documentMetadata, chunks, embeddings);
+      } catch (dbErr: unknown) {
+        console.error("Vector storage warning:", dbErr);
+        // Continue and return chunks even if vector persistence warning occurs
+      }
+    }
 
     const responsePayload: DocumentUploadResponse = {
       success: true,

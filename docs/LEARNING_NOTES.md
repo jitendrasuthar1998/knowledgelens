@@ -82,3 +82,24 @@
 ### 5. Page Provenance for Grounded Citations
 - Many generic frameworks concatenate the entire document into a single flat string before chunking, destroying page indices.
 - By chunking page-by-page and attaching `pageNumber`, every chunk retains its original location, enabling clickable citations (*"Source: Page 3"*) in Phase 5.
+
+---
+
+## Phase 4: Embeddings & Vector Search (PostgreSQL + pgvector)
+
+### 1. What is an Embedding?
+- An embedding is a dense vector of floating-point numbers representing the semantic meaning of text in multi-dimensional space.
+- Similar concepts (e.g. "React developer" and "Frontend engineer") map to vectors with small angles between them, while unrelated concepts have large angles.
+
+### 2. Distance Metrics: Cosine Distance vs Euclidean Distance
+- **Euclidean ($L_2$) Distance (`<->`):** Measures straight-line distance between points. Sensitive to passage length.
+- **Cosine Distance (`<=>`):** Measures the angle between two vectors: $1 - \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}$.
+- Cosine distance is the industry standard for text RAG because it evaluates semantic direction independently of document length.
+
+### 3. Vector Indexing: HNSW vs IVFFlat
+- **IVFFlat (Inverted File Flat):** Partitions vectors into clusters (Voronoi cells). Requires training/populating data before creating the index. Slower query performance at scale.
+- **HNSW (Hierarchical Navigable Small World):** Builds a multi-layer graph where nearest neighbors are connected. Offers sub-millisecond query latency and superior recall without requiring pre-clustering. We use `USING hnsw (embedding vector_cosine_ops)`.
+
+### 4. Matryoshka Embeddings (Dimensionality Truncation)
+- Google's `gemini-embedding-001` natively outputs up to 3,072 dimensions.
+- By configuring `outputDimensionality: 768`, we generate compact 768-dimensional vectors that retain $>99\%$ of semantic accuracy while cutting database storage and vector index memory by $75\%$.
