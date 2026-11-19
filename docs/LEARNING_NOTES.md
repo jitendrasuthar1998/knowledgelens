@@ -103,3 +103,35 @@
 ### 4. Matryoshka Embeddings (Dimensionality Truncation)
 - Google's `gemini-embedding-001` natively outputs up to 3,072 dimensions.
 - By configuring `outputDimensionality: 768`, we generate compact 768-dimensional vectors that retain $>99\%$ of semantic accuracy while cutting database storage and vector index memory by $75\%$.
+
+---
+
+## Phase 5: Grounded RAG Pipeline, Citations & Source Inspection
+
+### 1. The Anatomy of a Production RAG Prompt
+- In standard chat, the prompt is simply `[user question]`.
+- In RAG, the query flow is:
+  1. User asks a question $\to$ create vector embedding of question.
+  2. Search pgvector database via `<=>` operator to find Top-K nearest chunk excerpts.
+  3. Inject those chunks into the system instruction along with strict grounding rules.
+  4. Stream model generation conditioned strictly on the retrieved context.
+
+### 2. Strict Grounding Constraints (Anti-Hallucination Prompting)
+- LLMs by default are trained to be helpful, meaning they prefer guessing over admitting ignorance.
+- We counter this by enforcing rules directly in the system instruction:
+  - *"Answer ONLY using information found in the document excerpts above."*
+  - *"If the answer is not present in the excerpts, respond with: 'I could not find relevant information about this in the uploaded document.'"*
+  - *"Do not hallucinate, speculate, or draw from general knowledge outside the excerpts."*
+
+### 3. Citations: Inline Generation vs Clean Presentation
+- We mandate the model to output structured citation markers: `[Source: <DocName>, Page <N>]`.
+- Instead of polluting the readable message text or rendering intrusive inline pills that disrupt sentence flow, we:
+  1. Extract citations with a regex pattern (`/\[Source:\s*([^,\]]+),\s*Page\s*(\d+)\]/g`).
+  2. Strip citation markers from the primary message bubble (`stripCitationMarkers()`) so the response reads as natural prose.
+  3. Render deduplicated clickable source cards in a dedicated `Sources` section right beneath the assistant bubble.
+  4. Clicking a source card triggers `SourceInspector` displaying the raw chunk text, token count, and page provenance.
+
+### 4. Database Connection Latency & Hot-Path Isolation
+- **The Cold-Start Trap in Serverless/Cloud DBs:** Cloud PostgreSQL providers (e.g., Supabase free tier) spin down idle connections. A connection timeout of 5 seconds can cause initial queries to abort.
+- **DDL vs DML Separation:** Never run DDL statements (`CREATE TABLE`, `CREATE EXTENSION`, `CREATE INDEX`) on every read query. In Phase 5, decoupling `initializeDatabase()` from `searchSimilarChunks()` and raising `connectionTimeoutMillis` to 15,000 ms eliminated cold-start failures.
+

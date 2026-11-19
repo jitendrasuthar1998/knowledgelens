@@ -14,13 +14,13 @@
 | **Phase 2** | Streaming Responses (`ReadableStream`, custom hooks, abort/stop generation) | **DONE** |
 | **Phase 3** | Document Ingestion (PDF upload, validation, parsing, recursive chunking) | **DONE** |
 | **Phase 4** | Embeddings & Vector Search (pgvector integration, cosine similarity retrieval) | **DONE** |
-| **Phase 5** | Complete Grounded RAG Pipeline (augmented prompts, citations, source inspector) | Pending |
+| **Phase 5** | Complete Grounded RAG Pipeline (augmented prompts, citations, source inspector) | **DONE** |
 | **Phase 6** | Hallucination Mitigation & Reliability (abstention, injection defense, eval suite) | Pending |
 | **Phase 7** | Production Polish & Multi-Doc Management (persistence, caching, optimizations) | Pending |
 
 ---
 
-## Current Status: Phase 4 Completed (Embeddings & Vector Search)
+## Current Status: Phase 5 Completed (Grounded RAG Pipeline & Citations)
 
 ### Completed Milestones:
 - [x] **Phase 0: Architecture & Tooling Baseline**
@@ -47,15 +47,23 @@
   - Embedding Service (`src/lib/ai/embeddings.ts`): 768-dimension vectors via `gemini-embedding-001`.
   - Automated Vector Ingestion in `POST /api/documents/upload`.
   - Semantic Retrieval Endpoint `POST /api/documents/search` via `<=>` cosine distance operator.
+- [x] **Phase 5: Grounded RAG Pipeline, Citations & Source Inspector**
+  - Connected `POST /api/chat` with `searchSimilarChunks()` for Top-5 cosine similarity vector retrieval.
+  - Constructed strict grounded system instruction with document context excerpts.
+  - LLM grounded citation generation format (`[Source: <DocName>, Page <N>]`).
+  - Implemented clean UI message presentation: message bubble shows clean text with citations stripped, accompanied by a dedicated "Sources" card deck below the AI response.
+  - Modal `SourceInspector` with interactive chunk preview and provenance metadata.
+  - Solved production cloud database cold-start timeout via pool configuration & decoupling DDL schema initialization from read hot-paths.
 
 ---
 
-## Phase 5 Roadmap & Implementation Steps (Next)
-- [ ] **Step 5.1: Grounded RAG Query Assembly**
-  - Connect `POST /api/chat` to `searchSimilarChunks()`: Retrieve Top-K document chunks for incoming user messages.
-  - Build prompt injection defense and strict system grounding constraints (*"Answer ONLY based on the provided document excerpts. If not in the document, state that clearly"*).
-- [ ] **Step 5.2: Clickable Inline Source Citations**
-  - Parse citations in LLM responses (e.g., `[Source: Page 1]`).
-  - Render interactive citation badges in `MessageBubble.tsx`.
-- [ ] **Step 5.3: Source Inspector Drawer / Modal**
-  - Clicking a citation opens a drawer highlighting the exact retrieved document chunk and similarity score.
+## Phase 6 Roadmap & Implementation Steps (Next)
+- [ ] **Step 6.1: Confidence Thresholding & Explicit Abstention**
+  - Add similarity score cutoff (e.g. cosine similarity < 0.60) to prevent retrieving irrelevant chunks.
+  - Formalize abstention behavior when no chunks meet the threshold.
+- [ ] **Step 6.2: Prompt Injection Defense & Context Delimiting**
+  - Enclose retrieved document excerpts within strict XML/Markdown delimiters.
+  - Explicit system prompt instructions to ignore conflicting or override commands embedded inside documents or queries.
+- [ ] **Step 6.3: Evaluation & Regression Verification**
+  - Build test queries to evaluate Grounded Factual QA vs. Out-of-Scope Hallucination traps.
+  - Validate citation fidelity (every cited page corresponds to actual ground-truth context).
