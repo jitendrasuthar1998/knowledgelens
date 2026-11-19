@@ -62,9 +62,10 @@
   - Added `RAG_SIMILARITY_THRESHOLD = 0.50` in `src/lib/ai/rag.ts` to filter low-confidence noise chunks.
   - Implemented `buildAbstentionInstruction(documentName)` to mandate polite abstention on out-of-scope queries.
   - Filtered raw database chunks in `POST /api/chat`, with clean fallback logs and zero irrelevant context injection.
-- [ ] **Step 6.2: Prompt Injection Defense & Context Delimiting**
-  - Enclose retrieved document excerpts within strict XML/Markdown delimiters.
-  - Explicit system prompt instructions to ignore conflicting or override commands embedded inside documents or queries.
+- [x] **Step 6.2: Prompt Injection Defense & Context Delimiting**
+  - Implemented `sanitizeDocumentContent()` to escape XML breakout sequences (`</document_context>`, `</excerpt>`).
+  - Restructured RAG context injection using strict `<document_context>` XML tags with metadata attributes (`index`, `document`, `page`, `confidence`).
+  - Added explicit Anti-Injection Directives and Conflict Resolution Rules enforcing instruction primacy over untrusted document data.
 - [ ] **Step 6.3: Evaluation & Regression Verification**
   - Build test queries to evaluate Grounded Factual QA vs. Out-of-Scope Hallucination traps.
   - Validate citation fidelity (every cited page corresponds to actual ground-truth context).
