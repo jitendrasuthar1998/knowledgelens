@@ -16,6 +16,11 @@ export const chatRequestSchema = z.object({
     .array(chatMessageSchema)
     .min(1, "At least one message is required")
     .max(20, "Conversation history limit exceeded (max 20 messages)"),
+  // Optional: When a document is loaded, the client passes its ID for vector retrieval
+  documentId: z
+    .string()
+    .uuid("documentId must be a valid UUID.")
+    .optional(),
 }).refine(
   (data) => {
     const lastMsg = data.messages[data.messages.length - 1];

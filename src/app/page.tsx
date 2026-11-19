@@ -58,7 +58,7 @@ export default function Home() {
                   <Upload className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Upload PDF</span>
                   <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                    Phase 3
+                    Phase 5
                   </span>
                 </>
               )}
@@ -66,7 +66,7 @@ export default function Home() {
 
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 font-mono px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Phase 3 Active</span>
+              <span>Phase 5 Active</span>
             </div>
           </div>
       </nav>
@@ -75,6 +75,7 @@ export default function Home() {
       <main className="flex-1 flex flex-col overflow-hidden">
         <ChatContainer
           activeDocument={activeDocument}
+          chunks={chunks}
           onOpenDocumentDrawer={() => setIsDrawerOpen(true)}
         />
       </main>

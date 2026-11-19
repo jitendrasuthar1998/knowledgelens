@@ -1,9 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
-import { ChatMessage, ChatResponseBody } from "@/types/chat";
+import type { ChatMessage, ChatResponseBody } from "@/types/chat";
 
-const DEFAULT_SYSTEM_INSTRUCTION = `You are KnowledgeLens, an AI Document Intelligence Assistant.
-Your goal is to assist users with clarity, precision, and accuracy.
-Keep responses concise, well-structured, and factual.
+export const DEFAULT_SYSTEM_INSTRUCTION = `You are KnowledgeLens, an AI Document Intelligence Assistant.
+  Your goal is to assist users with clarity, precision, and accuracy.
+Keep responses concise, well - structured, and factual.
 If you are unsure of an answer, state that clearly rather than inventing facts.`;
 
 function getGeminiClient(): GoogleGenAI {
@@ -23,10 +23,10 @@ function getGeminiClient(): GoogleGenAI {
  * Converts application messages into Gemini's contents schema.
  */
 export async function generateGeminiChat(
-  messages: Array<Pick<ChatMessage, "role" | "content">>
+  messages: Array<Pick<ChatMessage, "role" | "content">>,
+  systemInstruction?: string
 ): Promise<ChatResponseBody> {
   const ai = getGeminiClient();
-  console.log("ai", ai)
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   // Map application roles ("user" | "assistant") to Gemini roles ("user" | "model")
@@ -40,7 +40,7 @@ export async function generateGeminiChat(
       model: modelName,
       contents,
       config: {
-        systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
+        systemInstruction: systemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
         temperature: 0.2, // Low temperature for deterministic, factual responses
       },
     });
@@ -75,10 +75,12 @@ export async function generateGeminiChat(
 /**
  * Executes a streaming chat completion request against Google Gemini.
  * Returns a standard Web ReadableStream that emits UTF-8 text chunks as they arrive from the model.
+ * Accepts an optional systemInstruction to override the default (used for RAG context injection).
  */
 export async function streamGeminiChat(
   messages: Array<Pick<ChatMessage, "role" | "content">>,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  systemInstruction?: string
 ): Promise<ReadableStream<Uint8Array>> {
   const ai = getGeminiClient();
   const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -92,7 +94,7 @@ export async function streamGeminiChat(
     model: modelName,
     contents,
     config: {
-      systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
+      systemInstruction: systemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
       temperature: 0.2,
     },
   });

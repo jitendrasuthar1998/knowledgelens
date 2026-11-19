@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chatRequestSchema } from "@/lib/validation/chat";
 import { streamGeminiChat } from "@/lib/ai/gemini";
+import { generateEmbedding } from "@/lib/ai/embeddings";
+import { searchSimilarChunks } from "@/lib/db/documents";
+import { buildRagSystemInstruction, DEFAULT_CHAT_INSTRUCTION } from "@/lib/ai/rag";
 import { ChatErrorResponse } from "@/types/chat";
 
 export async function POST(req: NextRequest) {
@@ -37,11 +40,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Forward to Server-Side AI Streaming Client
-    const { messages } = validationResult.data;
-    const stream = await streamGeminiChat(messages, req.signal);
+    const { messages, documentId } = validationResult.data;
 
-    // 4. Return chunked streaming Response
+    // 3. RAG: If a document is active, retrieve relevant chunks via vector search
+    let systemInstruction = DEFAULT_CHAT_INSTRUCTION;
+
+    if (documentId && process.env.DATABASE_URL) {
+      try {
+        // Get the user's latest question
+        const userQuery = messages[messages.length - 1].content;
+
+        // Embed the query and search for the top 5 most relevant chunks
+        const queryEmbedding = await generateEmbedding(userQuery);
+        const relevantChunks = await searchSimilarChunks(queryEmbedding, 5, documentId);
+
+        if (relevantChunks.length > 0) {
+          // Build a strict grounded RAG system instruction
+          systemInstruction = buildRagSystemInstruction(relevantChunks);
+        }
+      } catch (ragErr) {
+        // If RAG retrieval fails, gracefully fall back to default assistant mode
+        console.error("RAG retrieval warning (falling back to default):", ragErr);
+      }
+    }
+
+    // 4. Stream grounded response from Gemini
+    const stream = await streamGeminiChat(messages, req.signal, systemInstruction);
+
+    // 5. Return chunked streaming Response
     return new Response(stream, {
       status: 200,
       headers: {
