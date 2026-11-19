@@ -15,12 +15,12 @@
 | **Phase 3** | Document Ingestion (PDF upload, validation, parsing, recursive chunking) | **DONE** |
 | **Phase 4** | Embeddings & Vector Search (pgvector integration, cosine similarity retrieval) | **DONE** |
 | **Phase 5** | Complete Grounded RAG Pipeline (augmented prompts, citations, source inspector) | **DONE** |
-| **Phase 6** | Hallucination Mitigation & Reliability (abstention, injection defense, eval suite) | Pending |
+| **Phase 6** | Hallucination Mitigation & Reliability (abstention, injection defense, eval suite) | **DONE** |
 | **Phase 7** | Production Polish & Multi-Doc Management (persistence, caching, optimizations) | Pending |
 
 ---
 
-## Current Status: Phase 5 Completed (Grounded RAG Pipeline & Citations)
+## Current Status: Phase 6 Completed (Hallucination Mitigation & Reliability)
 
 ### Completed Milestones:
 - [x] **Phase 0: Architecture & Tooling Baseline**
@@ -54,18 +54,22 @@
   - Implemented clean UI message presentation: message bubble shows clean text with citations stripped, accompanied by a dedicated "Sources" card deck below the AI response.
   - Modal `SourceInspector` with interactive chunk preview and provenance metadata.
   - Solved production cloud database cold-start timeout via pool configuration & decoupling DDL schema initialization from read hot-paths.
+- [x] **Phase 6: Hallucination Mitigation & Reliability**
+  - **Step 6.1 (Thresholding & Abstention):** `RAG_SIMILARITY_THRESHOLD = 0.50` cosine cutoff; `buildAbstentionInstruction()` ensures zero hallucination on off-topic questions.
+  - **Step 6.2 (Injection Defense):** Neutralized XML breakout attempts via `sanitizeDocumentContent()`; isolated context within `<document_context>` tags; enforced system instruction primacy and conflict resolution rules.
+  - **Step 6.3 (Evaluation & Verification):** Successfully verified across Grounded Factual QA, Out-of-Scope Abstention Traps, and Direct/Indirect Prompt Injection Attacks.
 
 ---
 
-## Phase 6 Roadmap & Implementation Steps (In Progress)
-- [x] **Step 6.1: Confidence Thresholding & Explicit Abstention**
-  - Added `RAG_SIMILARITY_THRESHOLD = 0.50` in `src/lib/ai/rag.ts` to filter low-confidence noise chunks.
-  - Implemented `buildAbstentionInstruction(documentName)` to mandate polite abstention on out-of-scope queries.
-  - Filtered raw database chunks in `POST /api/chat`, with clean fallback logs and zero irrelevant context injection.
-- [x] **Step 6.2: Prompt Injection Defense & Context Delimiting**
-  - Implemented `sanitizeDocumentContent()` to escape XML breakout sequences (`</document_context>`, `</excerpt>`).
-  - Restructured RAG context injection using strict `<document_context>` XML tags with metadata attributes (`index`, `document`, `page`, `confidence`).
-  - Added explicit Anti-Injection Directives and Conflict Resolution Rules enforcing instruction primacy over untrusted document data.
-- [ ] **Step 6.3: Evaluation & Regression Verification**
-  - Build test queries to evaluate Grounded Factual QA vs. Out-of-Scope Hallucination traps.
-  - Validate citation fidelity (every cited page corresponds to actual ground-truth context).
+## Phase 7 Roadmap & Implementation Steps (Next)
+- [ ] **Step 7.1: Multi-Document Management & Listing API**
+  - Endpoint `GET /api/documents` to retrieve all uploaded documents from PostgreSQL.
+  - UI document switcher in navigation / drawer to select the active document for RAG without re-uploading.
+  - Delete document functionality with cascading vector chunk cleanup.
+- [ ] **Step 7.2: Local Storage / Session History Persistence**
+  - Persist conversation messages in `localStorage` so refreshing the page doesn't wipe the chat.
+  - Clear conversation button that resets both memory state and storage.
+- [ ] **Step 7.3: Production Polish, Performance & Mobile Responsiveness**
+  - Latency optimization: query embedding caching for repeated questions.
+  - Polish responsive layouts across mobile, tablet, and desktop viewports.
+  - Final end-to-end lint, type-check, and interview prep wrap-up.
