@@ -45,23 +45,35 @@ export async function POST(req: NextRequest) {
     // 3. RAG: If a document is active, retrieve relevant chunks via vector search
     let systemInstruction = DEFAULT_CHAT_INSTRUCTION;
 
+    console.log("[RAG] documentId received:", documentId);
+    console.log("[RAG] DATABASE_URL present:", !!process.env.DATABASE_URL);
+
     if (documentId && process.env.DATABASE_URL) {
       try {
         // Get the user's latest question
         const userQuery = messages[messages.length - 1].content;
+        console.log("[RAG] Generating embedding for query:", userQuery.slice(0, 80));
 
         // Embed the query and search for the top 5 most relevant chunks
         const queryEmbedding = await generateEmbedding(userQuery);
+        console.log("[RAG] Embedding generated, dimensions:", queryEmbedding.length);
+
         const relevantChunks = await searchSimilarChunks(queryEmbedding, 5, documentId);
+        console.log("[RAG] Chunks retrieved:", relevantChunks.length, relevantChunks.map(c => `[${c.chunkIndex}] score=${c.similarityScore.toFixed(3)}`));
 
         if (relevantChunks.length > 0) {
           // Build a strict grounded RAG system instruction
           systemInstruction = buildRagSystemInstruction(relevantChunks);
+          console.log("[RAG] ✅ RAG system instruction built, length:", systemInstruction.length);
+        } else {
+          console.warn("[RAG] ⚠️ No chunks found for documentId:", documentId);
         }
       } catch (ragErr) {
         // If RAG retrieval fails, gracefully fall back to default assistant mode
-        console.error("RAG retrieval warning (falling back to default):", ragErr);
+        console.error("[RAG] ❌ RAG retrieval error (falling back to default):", ragErr);
       }
+    } else {
+      console.log("[RAG] Skipping RAG — no documentId or DATABASE_URL missing");
     }
 
     // 4. Stream grounded response from Gemini

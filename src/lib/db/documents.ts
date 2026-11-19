@@ -78,14 +78,17 @@ export async function saveDocumentWithVectors(
 /**
  * Performs Cosine Similarity Vector Search using pgvector's <=> distance operator.
  * Returns the Top-K most semantically relevant chunks with their similarity score (0.0 to 1.0).
+ *
+ * NOTE: Does NOT call initializeDatabase() — the schema is already set up in Supabase.
+ * initializeDatabase() is only needed during document upload (saveDocumentWithVectors).
  */
 export async function searchSimilarChunks(
   queryEmbedding: number[],
   topK = 5,
   documentId?: string
 ): Promise<RetrievedChunk[]> {
-  await initializeDatabase();
-
+  // Skip initializeDatabase() here — schema is already set up in Supabase.
+  // Calling it on every RAG request causes DDL timeout on cold connections.
   const vectorString = `[${queryEmbedding.join(",")}]`;
 
   const sql = `
@@ -127,7 +130,6 @@ export async function searchSimilarChunks(
  * Deletes a document and cascades deletion of its vector chunks.
  */
 export async function deleteDocument(documentId: string): Promise<void> {
-  await initializeDatabase();
   await query("DELETE FROM documents WHERE id = $1", [documentId]);
 }
 
