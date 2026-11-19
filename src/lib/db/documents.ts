@@ -85,7 +85,8 @@ export async function saveDocumentWithVectors(
 export async function searchSimilarChunks(
   queryEmbedding: number[],
   topK = 5,
-  documentId?: string
+  documentId?: string,
+  minSimilarity = 0
 ): Promise<RetrievedChunk[]> {
   // Skip initializeDatabase() here — schema is already set up in Supabase.
   // Calling it on every RAG request causes DDL timeout on cold connections.
@@ -120,10 +121,12 @@ export async function searchSimilarChunks(
     similarityScore: string | number;
   }>(sql, [vectorString, documentId || null, topK]);
 
-  return result.rows.map((row) => ({
-    ...row,
-    similarityScore: parseFloat(String(row.similarityScore)),
-  }));
+  return result.rows
+    .map((row) => ({
+      ...row,
+      similarityScore: parseFloat(String(row.similarityScore)),
+    }))
+    .filter((chunk) => chunk.similarityScore >= minSimilarity);
 }
 
 /**

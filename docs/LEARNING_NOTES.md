@@ -135,3 +135,21 @@
 - **The Cold-Start Trap in Serverless/Cloud DBs:** Cloud PostgreSQL providers (e.g., Supabase free tier) spin down idle connections. A connection timeout of 5 seconds can cause initial queries to abort.
 - **DDL vs DML Separation:** Never run DDL statements (`CREATE TABLE`, `CREATE EXTENSION`, `CREATE INDEX`) on every read query. In Phase 5, decoupling `initializeDatabase()` from `searchSimilarChunks()` and raising `connectionTimeoutMillis` to 15,000 ms eliminated cold-start failures.
 
+---
+
+## Phase 6: Hallucination Mitigation & Reliability
+
+### 1. Confidence Thresholding vs Naive Top-K Retrieval
+- **The Naive Top-K Flaw:** Standard vector search (`ORDER BY embedding <=> query LIMIT 5`) guarantees 5 results, even if the user query is completely off-topic (e.g. asking a recipe query on a financial report). The database returns nearest neighbors with low similarity scores ($\sim 0.25 - 0.35$).
+- **Noise Injection & Hallucination:** Injecting low-similarity chunks into the LLM prompt pollutes the model's attention mechanism and encourages false correlations.
+- **Solution:** We enforce a confidence cutoff (`RAG_SIMILARITY_THRESHOLD = 0.50`). Chunks with $< 50\%$ cosine similarity are discarded as noise.
+
+### 2. Explicit Abstention Architecture
+- If zero chunks meet the confidence threshold (`confidentChunks.length === 0`), we trigger **Explicit Abstention Mode** via `buildAbstentionInstruction(documentName)`.
+- The system instruction instructs the LLM:
+  1. Politely state that the uploaded document does not contain information to answer their query.
+  2. For greetings ("hello", "hi"), respond courteously and invite questions about the specific document.
+  3. Never guess, extrapolate, or use general world knowledge when grounded mode is requested.
+  4. Omit citation tags (`[Source: ...]`) since no valid document passages supported the query.
+
+

@@ -57,10 +57,11 @@
 
 ---
 
-## Phase 6 Roadmap & Implementation Steps (Next)
-- [ ] **Step 6.1: Confidence Thresholding & Explicit Abstention**
-  - Add similarity score cutoff (e.g. cosine similarity < 0.60) to prevent retrieving irrelevant chunks.
-  - Formalize abstention behavior when no chunks meet the threshold.
+## Phase 6 Roadmap & Implementation Steps (In Progress)
+- [x] **Step 6.1: Confidence Thresholding & Explicit Abstention**
+  - Added `RAG_SIMILARITY_THRESHOLD = 0.50` in `src/lib/ai/rag.ts` to filter low-confidence noise chunks.
+  - Implemented `buildAbstentionInstruction(documentName)` to mandate polite abstention on out-of-scope queries.
+  - Filtered raw database chunks in `POST /api/chat`, with clean fallback logs and zero irrelevant context injection.
 - [ ] **Step 6.2: Prompt Injection Defense & Context Delimiting**
   - Enclose retrieved document excerpts within strict XML/Markdown delimiters.
   - Explicit system prompt instructions to ignore conflicting or override commands embedded inside documents or queries.

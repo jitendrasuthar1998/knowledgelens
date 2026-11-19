@@ -1,6 +1,13 @@
 import { RetrievedChunk } from "@/lib/db/documents";
 
 /**
+ * Minimum cosine similarity required for a chunk to be considered relevant.
+ * Cosine similarity ranges from 0.0 to 1.0 (1 - cosine distance).
+ * Values below 0.50 are typically background noise or off-topic queries.
+ */
+export const RAG_SIMILARITY_THRESHOLD = 0.50;
+
+/**
  * Builds a strict grounded RAG system instruction.
  * Injects retrieved document excerpts and enforces the model to answer
  * ONLY from provided context — the core hallucination safeguard.
@@ -26,6 +33,27 @@ STRICT GROUNDING RULES — YOU MUST FOLLOW THESE:
 3. After every factual claim, cite your source inline using this EXACT format: [Source: <DocumentName>, Page <N>]
 4. Do not hallucinate, speculate, or draw from general knowledge outside the excerpts.
 5. Keep answers concise, structured, and factual.`;
+}
+
+/**
+ * Builds an explicit abstention system instruction when NO chunks pass the confidence threshold.
+ * Instructs the model to state clearly that the document does not contain the answer,
+ * completely preventing hallucination or guesswork.
+ */
+export function buildAbstentionInstruction(documentName?: string): string {
+  const docRef = documentName ? `the uploaded document ("${documentName}")` : "the uploaded document";
+
+  return `You are KnowledgeLens, an AI Document Intelligence Assistant.
+
+STRICT GROUNDING & ABSTENTION MODE:
+The user has asked a question, but semantic vector search found NO relevant passages with sufficient confidence in ${docRef}.
+
+RULES:
+1. Clearly and politely inform the user that ${docRef} does not contain information to answer their query.
+2. If the user sent a general greeting (e.g., "hi", "hello"), greet them politely and invite them to ask questions about ${docRef}.
+3. DO NOT attempt to answer off-topic questions from general world knowledge.
+4. Never invent facts or hallucinate content not present in the document.
+5. Do NOT include any [Source: ...] citation tags since no document chunks matched.`;
 }
 
 /**
